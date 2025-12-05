@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Collectes déchets – Limelette 2026</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<style>
+:root {
+  --fond: #f6f0e3;
+  --fond2: #ede5d4;
+  --bord: #d5c7ad;
+  --texte: #3a3328;
+  --accent: #9b7b4d;
+  --accent-clair: #c6a578;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--fond);
+  color: var(--texte);
+  margin: 0;
+  padding: 1rem;
+}
+
+h1 {
+  text-align: center;
+  font-size: 1.4rem;
+  margin-bottom: 0.3rem;
+  color: var(--accent);
+}
+
+.subtitle {
+  text-align: center;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.section-title {
+  margin: 1.3rem 0 0.4rem;
+  font-size: 1.1rem;
+  color: var(--accent);
+}
+
+.searchbar {
+  margin-bottom: 0.7rem;
+  display: flex;
+  justify-content: center;
+}
+
+input[type="search"] {
+  padding: 0.5rem 0.7rem;
+  width: 90%;
+  max-width: 340px;
+  border-radius: 999px;
+  border: 1px solid var(--bord);
+  font-size: 0.95rem;
+  background: #fdfaf4;
+}
+
+/* Tableau zébré */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th, td {
+  padding: 7px;
+  border: 1px solid var(--bord);
+}
+
+th {
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+  user-select: none;
+}
+
+tr:nth-child(even) {
+  background: var(--fond2);
+}
+tr:nth-child(odd) {
+  background: var(--fond);
+}
+
+/* Calendrier mensuel */
+.calendar-controls {
+  display: flex;
+  justify-content: center;
+  margin: 0.4rem 0 0.6rem;
+}
+
+select {
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--bord);
+  background: #fdfaf4;
+  font-size: 0.9rem;
+}
+
+.calendar {
+  border: 1px solid var(--bord);
+  border-radius: 0.6rem;
+  padding: 0.4rem;
+  background: #fbf6eb;
+}
+
+.calendar-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.calendar-table th,
+.calendar-table td {
+  border: 1px solid var(--bord);
+  width: 14.28%;
+  vertical-align: top;
+  padding: 4px;
+  height: 60px;
+}
+
+.calendar-table th {
+  background: var(--accent);
+  color: white;
+  text-align: center;
+}
+
+.calendar-day-number {
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.badges {
+  margin-top: 2px;
+  font-size: 0.75rem;
+}
+
+.badge {
+  display: inline-block;
+  margin-top: 1px;
+}
+
+/* Légende */
+.legend {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+}
+.legend span {
+  margin-right: 0.7rem;
+}
+</style>
+</head>
+<body>
+
+<h1>Collectes des déchets – Limelette 2026</h1>
+<div class="subtitle">Zone 1 – Lundi : déchets résiduels & organiques • PMC & papiers selon calendrier officiel</div>
+
+<!-- TABLEAU -->
+<div class="section-title">Tableau des collectes (triable)</div>
+
+<div class="searchbar">
+  <input type="search" id="search" placeholder="Rechercher… (PMC, papier, lundi...)">
+</div>
+
+<table id="table">
+  <thead>
+    <tr>
+      <th data-col="date">Date</th>
+      <th data-col="type">Type</th>
+      <th data-col="detail">Détail</th>
+    </tr>
+  </thead>
+  <tbody id="tbody">
+    <!-- Rempli en JavaScript -->
+  </tbody>
+</table>
+
+<!-- CALENDRIER MENSUEL -->
+<div class="section-title">Calendrier mensuel</div>
+
+<div class="calendar-controls">
+  <select id="monthSelect"></select>
+</div>
+
+<div id="calendar" class="calendar"></div>
+
+<div class="legend">
+  <span>🟠 Résiduels</span>
+  <span>🟤 Organiques</span>
+  <span>♻️ PMC</span>
+  <span>📦 Papiers-cartons</span>
+</div>
+
+<script>
+// ----------------------
+// Génération des données
+// ----------------------
+const YEAR = 2026;
+
+// icônes
+const ICON_RESIDUELS = "🟠";
+const ICON_ORGANIQUES = "🟤";
+const ICON_PMC = "♻️";
+const ICON_PC = "📦";
+
+// PMC (ligne bleue)
+const pmcByMonth = {
+  0:[3,15,29],
+  1:[12,26],
+  2:[12,26],
+  3:[9,23],
+  4:[7,21],
+  5:[4,18],
+  6:[2,16,30],
+  7:[13,27],
+  8:[10,24],
+  9:[8,22],
+  10:[5,19],
+  11:[3,17,31]
+};
+
+// Papiers-cartons (ligne beige)
+// 22 – 19 – 19 – 16 – 16 – 11 – 9 – 6 – 3 – 1 & 29 – 26 – 24
+const paperByMonth = {
+  0:[22],
+  1:[19],
+  2:[19],
+  3:[16],
+  4:[16],
+  5:[11],
+  6:[9],
+  7:[6],
+  8:[3],
+  9:[1,29],
+  10:[26],
+  11:[24]
+};
+
+// liste d'événements + index par date
+const events = [];
+const eventsByDate = {};  // { '2026-01-03': [event1,event2] }
+
+function addEvent(dateObj, type, detail, icon) {
+  const iso = dateObj.toISOString().slice(0,10); // YYYY-MM-DD
+  const display = dateObj.toLocaleDateString('fr-BE');
+
+  const evt = { iso, display, type, detail, icon };
+  events.push(evt);
+
+  if (!eventsByDate[iso]) eventsByDate[iso] = [];
+  eventsByDate[iso].push(evt);
+}
+
+// 1) Déchets résiduels & organiques : chaque lundi (zone 1)
+for (let m = 0; m < 12; m++) {
+  const daysInMonth = new Date(YEAR, m+1, 0).getDate();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dt = new Date(YEAR, m, d);
+    if (dt.getDay() === 1) { // lundi
+      addEvent(
+        dt,
+        "Déchets résiduels & organiques",
+        "Collecte du lundi (zone 1)",
+        ICON_RESIDUELS + ICON_ORGANIQUES
+      ); // 🟠🟤
+    }
+  }
+}
+
+// 2) PMC
+for (let m = 0; m < 12; m++) {
+  (pmcByMonth[m] || []).forEach(day => {
+    const dt = new Date(YEAR, m, day);
+    addEvent(dt, "PMC", "Collecte PMC", ICON_PMC); // ♻️
+  });
+}
+
+// 3) Papiers-cartons
+for (let m = 0; m < 12; m++) {
+  (paperByMonth[m] || []).forEach(day => {
+    const dt = new Date(YEAR, m, day);
+    addEvent(dt, "Papiers-cartons", "Collecte papiers-cartons", ICON_PC); // 📦
+  });
+}
+
+// ----------------------
+// Remplir le tableau
+// ----------------------
+const tbody = document.getElementById("tbody");
+
+function buildTable(sortedEvents) {
+  tbody.innerHTML = "";
+  sortedEvents.forEach(evt => {
+    const tr = document.createElement("tr");
+    tr.dataset.date = evt.iso;
+
+    const tdDate = document.createElement("td");
+    tdDate.textContent = evt.display;
+
+    const tdType = document.createElement("td");
+    tdType.textContent = `${evt.icon} ${evt.type}`;
+
+    const tdDetail = document.createElement("td");
+    tdDetail.textContent = evt.detail;
+
+    tr.appendChild(tdDate);
+    tr.appendChild(tdType);
+    tr.appendChild(tdDetail);
+    tbody.appendChild(tr);
+  });
+}
+
+// tri par date par défaut
+events.sort((a,b) => a.iso.localeCompare(b.iso));
+buildTable(events);
+
+// ----------------------
+// Tri des colonnes
+// ----------------------
+const table = document.getElementById("table");
+let sortDirection = {
+  date: "asc",
+  type: "asc",
+  detail: "asc"
+};
+
+table.querySelectorAll("th").forEach(th => {
+  th.addEventListener("click", () => {
+    const col = th.dataset.col;
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+
+    if (col === "date") {
+      rows.sort((r1, r2) => {
+        const a = r1.dataset.date;
+        const b = r2.dataset.date;
+        return sortDirection.date === "asc"
+          ? a.localeCompare(b)
+          : b.localeCompare(a);
+      });
+      sortDirection.date = sortDirection.date === "asc" ? "desc" : "asc";
+    } else {
+      const idx = col === "type" ? 1 : 2;
+      rows.sort((r1, r2) => {
+        const a = r1.children[idx].innerText.toLowerCase();
+        const b = r2.children[idx].innerText.toLowerCase();
+        if (a < b) return sortDirection[col] === "asc" ? -1 : 1;
+        if (a > b) return sortDirection[col] === "asc" ? 1 : -1;
+        return 0;
+      });
+      sortDirection[col] = sortDirection[col] === "asc" ? "desc" : "asc";
+    }
+    rows.forEach(r => tbody.appendChild(r));
+  });
+});
+
+// ----------------------
+// Recherche
+// ----------------------
+document.getElementById("search").addEventListener("input", function () {
+  const filter = this.value.toLowerCase();
+  Array.from(tbody.querySelectorAll("tr")).forEach(tr => {
+    tr.style.display = tr.innerText.toLowerCase().includes(filter) ? "" : "none";
+  });
+});
+
+// ----------------------
+// Calendrier mensuel
+// ----------------------
+const monthNames = [
+  "Janvier","Février","Mars","Avril","Mai","Juin",
+  "Juillet","Août","Septembre","Octobre","Novembre","Décembre"
+];
+
+const monthSelect = document.getElementById("monthSelect");
+monthNames.forEach((name, idx) => {
+  const opt = document.createElement("option");
+  opt.value = idx;
+  opt.textContent = `${name} ${YEAR}`;
+  monthSelect.appendChild(opt);
+});
+monthSelect.value = 0;
+
+const calendarDiv = document.getElementById("calendar");
+
+function renderCalendar(monthIndex) {
+  const firstDay = new Date(YEAR, monthIndex, 1);
+  const daysInMonth = new Date(YEAR, monthIndex + 1, 0).getDate();
+
+  let start = firstDay.getDay(); // 0..6 (dimanche..samedi)
+  start = (start + 6) % 7;       // lundi = 0
+
+  let html = '<table class="calendar-table">';
+  html += '<thead><tr>';
+  ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"].forEach(d => {
+    html += `<th>${d}</th>`;
+  });
+  html += '</tr></thead><tbody><tr>';
+
+  let dayCounter = 1;
+
+  for (let row = 0; row < 6; row++) {
+    for (let col = 0; col < 7; col++) {
+      if (row === 0 && col < start || dayCounter > daysInMonth) {
+        html += '<td></td>';
+      } else {
+        const day = dayCounter;
+        const iso = `${YEAR}-${String(monthIndex+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+        const dayEvents = eventsByDate[iso] || [];
+
+        html += '<td>';
+        html += `<div class="calendar-day-number">${day}</div>`;
+        if (dayEvents.length > 0) {
+          html += '<div class="badges">';
+          dayEvents.forEach(evt => {
+            html += `<div class="badge">${evt.icon}</div>`;
+          });
+          html += '</div>';
+        }
+        html += '</td>';
+        dayCounter++;
+      }
+    }
+    if (dayCounter > daysInMonth) break;
+    html += '</tr><tr>';
+  }
+
+  html += '</tr></tbody></table>';
+  calendarDiv.innerHTML = html;
+}
+
+monthSelect.addEventListener("change", () => {
+  renderCalendar(parseInt(monthSelect.value, 10));
+});
+
+// affichage initial
+renderCalendar(0);
+</script>
+
+</body>
+</html>
