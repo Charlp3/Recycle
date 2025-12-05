@@ -42,20 +42,57 @@ h1 {
   color: var(--accent);
 }
 
+/* Zone compte à rebours */
+.counters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+
+.counter-box {
+  border: 1px solid var(--bord);
+  border-radius: 0.6rem;
+  padding: 0.4rem 0.6rem;
+  background: #fbf6eb;
+  font-size: 0.85rem;
+}
+
+.counter-title {
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+}
+
+.counter-value {
+  font-size: 0.85rem;
+}
+
+/* Barre de recherche + bouton */
 .searchbar {
   margin-bottom: 0.7rem;
   display: flex;
   justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 input[type="search"] {
   padding: 0.5rem 0.7rem;
-  width: 90%;
+  width: 70%;
   max-width: 340px;
   border-radius: 999px;
   border: 1px solid var(--bord);
   font-size: 0.95rem;
   background: #fdfaf4;
+}
+
+button {
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--bord);
+  background: #f0e4cf;
+  font-size: 0.85rem;
+  color: var(--texte);
 }
 
 /* Tableau zébré */
@@ -165,11 +202,29 @@ select {
 <h1>Collectes des déchets – Limelette 2026</h1>
 <div class="subtitle">Zone 1 — Lundi : déchets résiduels & organiques • PMC & papiers selon calendrier officiel — v1.0</div>
 
+<!-- COMPTE À REBOURS -->
+<div class="section-title">Prochaines collectes</div>
+<div class="counters">
+  <div class="counter-box">
+    <div class="counter-title">🟠🟤 Résiduels & organiques</div>
+    <div class="counter-value" id="count-resorg">Calcul en cours…</div>
+  </div>
+  <div class="counter-box">
+    <div class="counter-title">♻️ PMC</div>
+    <div class="counter-value" id="count-pmc">Calcul en cours…</div>
+  </div>
+  <div class="counter-box">
+    <div class="counter-title">📦 Papiers-cartons</div>
+    <div class="counter-value" id="count-paper">Calcul en cours…</div>
+  </div>
+</div>
+
 <!-- TABLEAU -->
 <div class="section-title">Tableau des collectes (triable)</div>
 
 <div class="searchbar">
   <input type="search" id="search" placeholder="Rechercher… (PMC, papier, lundi...)">
+  <button id="togglePast">Afficher toutes les collectes</button>
 </div>
 
 <table id="table">
@@ -262,7 +317,8 @@ const eventsByDate = {};  // { '2026-01-03': [event1,event2] }
 function addEvent(y, m, d, type, detail, icon) {
   const iso = isoDate(y, m, d);
   const display = formatFR(y, m, d);
-  const evt = { iso, display, type, detail, icon };
+  const time = Date.UTC(y, m, d); // pour les calculs de jours
+  const evt = { iso, display, type, detail, icon, time };
   events.push(evt);
   if (!eventsByDate[iso]) eventsByDate[iso] = [];
   eventsByDate[iso].push(evt);
@@ -301,13 +357,65 @@ for (let m = 0; m < 12; m++) {
 }
 
 // ----------------------
-// Remplir le tableau
+// Compte à rebours par type
+// ----------------------
+const now = new Date();
+const todayUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+
+function formatCountdown(evt) {
+  if (!evt) return "Aucune collecte prévue";
+  const diffDays = Math.round((evt.time - todayUTC) / 86400000);
+  let prefix;
+  if (diffDays < 0) {
+    return "Aucune collecte future";
+  } else if (diffDays === 0) {
+    prefix = "Aujourd'hui";
+  } else if (diffDays === 1) {
+    prefix = "Demain";
+  } else {
+    prefix = `Dans ${diffDays} jours`;
+  }
+  return `${prefix} (${evt.display})`;
+}
+
+function nextEventOfType(typeLabel) {
+  const future = events
+    .filter(e => e.type === typeLabel && e.time >= todayUTC)
+    .sort((a,b) => a.time - b.time);
+  return future[0] || null;
+}
+
+document.getElementById("count-resorg").textContent =
+  formatCountdown(nextEventOfType("Déchets résiduels & organiques"));
+
+document.getElementById("count-pmc").textContent =
+  formatCountdown(nextEventOfType("PMC"));
+
+document.getElementById("count-paper").textContent =
+  formatCountdown(nextEventOfType("Papiers-cartons"));
+
+// ----------------------
+// Préparation des listes pour le tableau
 // ----------------------
 const tbody = document.getElementById("tbody");
+const sortedEvents = [...events].sort((a,b) => a.iso.localeCompare(b.iso));
 
-function buildTable(sortedEvents) {
+const todayIso = isoDate(now.getFullYear(), now.getMonth(), now.getDate());
+const firstIso = sortedEvents[0].iso;
+const lastIso  = sortedEvents[sortedEvents.length - 1].iso;
+
+let upcomingEvents;
+if (todayIso > firstIso && todayIso <= lastIso) {
+  upcomingEvents = sortedEvents.filter(e => e.iso >= todayIso);
+} else {
+  upcomingEvents = [...sortedEvents];
+}
+
+let showingAll = false; // par défaut : seulement les prochaines
+
+function buildTable(list) {
   tbody.innerHTML = "";
-  sortedEvents.forEach(evt => {
+  list.forEach(evt => {
     const tr = document.createElement("tr");
     tr.dataset.date = evt.iso;
 
@@ -327,9 +435,27 @@ function buildTable(sortedEvents) {
   });
 }
 
-// tri par date par défaut
-events.sort((a,b) => a.iso.localeCompare(b.iso));
-buildTable(events);
+// affichage initial : seulement les prochaines collectes
+buildTable(upcomingEvents);
+
+// bouton de bascule
+const toggleBtn = document.getElementById("togglePast");
+toggleBtn.addEventListener("click", () => {
+  showingAll = !showingAll;
+  if (showingAll) {
+    buildTable(sortedEvents);
+    toggleBtn.textContent = "Afficher seulement les prochaines";
+  } else {
+    buildTable(upcomingEvents);
+    toggleBtn.textContent = "Afficher toutes les collectes";
+  }
+  const currentFilter = document.getElementById("search").value.toLowerCase();
+  if (currentFilter) {
+    Array.from(tbody.querySelectorAll("tr")).forEach(tr => {
+      tr.style.display = tr.innerText.toLowerCase().includes(currentFilter) ? "" : "none";
+    });
+  }
+});
 
 // ----------------------
 // Tri des colonnes
@@ -381,7 +507,7 @@ document.getElementById("search").addEventListener("input", function () {
 });
 
 // ----------------------
-// Calendrier mensuel
+// Calendrier mensuel (reste complet)
 // ----------------------
 const monthNames = [
   "Janvier","Février","Mars","Avril","Mai","Juin",
