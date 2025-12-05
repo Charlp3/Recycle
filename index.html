@@ -26,7 +26,7 @@ body {
 h1 {
   text-align: center;
   font-size: 1.4rem;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.1rem;
   color: var(--accent);
 }
 
@@ -150,12 +150,20 @@ select {
 .legend span {
   margin-right: 0.7rem;
 }
+
+/* Footer */
+.footer {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
 </style>
 </head>
 <body>
 
 <h1>Collectes des déchets – Limelette 2026</h1>
-<div class="subtitle">Zone 1 – Lundi : déchets résiduels & organiques • PMC & papiers selon calendrier officiel</div>
+<div class="subtitle">Zone 1 — Lundi : déchets résiduels & organiques • PMC & papiers selon calendrier officiel — v1.0</div>
 
 <!-- TABLEAU -->
 <div class="section-title">Tableau des collectes (triable)</div>
@@ -193,11 +201,21 @@ select {
   <span>📦 Papiers-cartons</span>
 </div>
 
+<div class="footer">
+  © Pierre Charlier 2025 — v1.0
+</div>
+
 <script>
-// ----------------------
-// Génération des données
-// ----------------------
+// --------- Helpers pour les dates ----------
 const YEAR = 2026;
+
+function isoDate(y, m, d) { // m = 0..11
+  return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+
+function formatFR(y, m, d) { // 31/01/2026
+  return `${String(d).padStart(2,'0')}/${String(m+1).padStart(2,'0')}/${y}`;
+}
 
 // icônes
 const ICON_RESIDUELS = "🟠";
@@ -222,7 +240,6 @@ const pmcByMonth = {
 };
 
 // Papiers-cartons (ligne beige)
-// 22 – 19 – 19 – 16 – 16 – 11 – 9 – 6 – 3 – 1 & 29 – 26 – 24
 const paperByMonth = {
   0:[22],
   1:[19],
@@ -242,13 +259,11 @@ const paperByMonth = {
 const events = [];
 const eventsByDate = {};  // { '2026-01-03': [event1,event2] }
 
-function addEvent(dateObj, type, detail, icon) {
-  const iso = dateObj.toISOString().slice(0,10); // YYYY-MM-DD
-  const display = dateObj.toLocaleDateString('fr-BE');
-
+function addEvent(y, m, d, type, detail, icon) {
+  const iso = isoDate(y, m, d);
+  const display = formatFR(y, m, d);
   const evt = { iso, display, type, detail, icon };
   events.push(evt);
-
   if (!eventsByDate[iso]) eventsByDate[iso] = [];
   eventsByDate[iso].push(evt);
 }
@@ -260,11 +275,13 @@ for (let m = 0; m < 12; m++) {
     const dt = new Date(YEAR, m, d);
     if (dt.getDay() === 1) { // lundi
       addEvent(
-        dt,
+        YEAR,
+        m,
+        d,
         "Déchets résiduels & organiques",
         "Collecte du lundi (zone 1)",
-        ICON_RESIDUELS + ICON_ORGANIQUES
-      ); // 🟠🟤
+        ICON_RESIDUELS + ICON_ORGANIQUES // 🟠🟤
+      );
     }
   }
 }
@@ -272,16 +289,14 @@ for (let m = 0; m < 12; m++) {
 // 2) PMC
 for (let m = 0; m < 12; m++) {
   (pmcByMonth[m] || []).forEach(day => {
-    const dt = new Date(YEAR, m, day);
-    addEvent(dt, "PMC", "Collecte PMC", ICON_PMC); // ♻️
+    addEvent(YEAR, m, day, "PMC", "Collecte PMC", ICON_PMC);
   });
 }
 
 // 3) Papiers-cartons
 for (let m = 0; m < 12; m++) {
   (paperByMonth[m] || []).forEach(day => {
-    const dt = new Date(YEAR, m, day);
-    addEvent(dt, "Papiers-cartons", "Collecte papiers-cartons", ICON_PC); // 📦
+    addEvent(YEAR, m, day, "Papiers-cartons", "Collecte papiers-cartons", ICON_PC);
   });
 }
 
@@ -396,19 +411,18 @@ function renderCalendar(monthIndex) {
   ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"].forEach(d => {
     html += `<th>${d}</th>`;
   });
-  html += '</tr></thead><tbody><tr>';
+  html += '</tr></thead><tbody>';
 
-  let dayCounter = 1;
+  let day = 1;
 
   for (let row = 0; row < 6; row++) {
+    html += '<tr>';
     for (let col = 0; col < 7; col++) {
-      if (row === 0 && col < start || dayCounter > daysInMonth) {
+      if (row === 0 && col < start || day > daysInMonth) {
         html += '<td></td>';
       } else {
-        const day = dayCounter;
-        const iso = `${YEAR}-${String(monthIndex+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+        const iso = isoDate(YEAR, monthIndex, day);
         const dayEvents = eventsByDate[iso] || [];
-
         html += '<td>';
         html += `<div class="calendar-day-number">${day}</div>`;
         if (dayEvents.length > 0) {
@@ -419,14 +433,14 @@ function renderCalendar(monthIndex) {
           html += '</div>';
         }
         html += '</td>';
-        dayCounter++;
+        day++;
       }
     }
-    if (dayCounter > daysInMonth) break;
-    html += '</tr><tr>';
+    html += '</tr>';
+    if (day > daysInMonth) break;
   }
 
-  html += '</tr></tbody></table>';
+  html += '</tbody></table>';
   calendarDiv.innerHTML = html;
 }
 
