@@ -521,7 +521,12 @@ monthNames.forEach((name, idx) => {
   opt.textContent = `${name} ${YEAR}`;
   monthSelect.appendChild(opt);
 });
-monthSelect.value = 0;
+// --- Mois courant au chargement ---
+const now = new Date();
+let initialMonth = (now.getFullYear() === YEAR) ? now.getMonth() : 0;
+
+monthSelect.value = initialMonth;
+renderCalendar(initialMonth);
 
 const calendarDiv = document.getElementById("calendar");
 
@@ -575,7 +580,7 @@ monthSelect.addEventListener("change", () => {
 });
 
 // affichage initial
-renderCalendar(0);
+renderCalendar(initialMonth);
 </script>
 
 </body>
