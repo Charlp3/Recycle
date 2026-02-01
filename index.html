@@ -521,12 +521,6 @@ monthNames.forEach((name, idx) => {
   opt.textContent = `${name} ${YEAR}`;
   monthSelect.appendChild(opt);
 });
-// --- Mois courant au chargement ---
-const now = new Date();
-let initialMonth = (now.getFullYear() === YEAR) ? now.getMonth() : 0;
-
-monthSelect.value = initialMonth;
-renderCalendar(initialMonth);
 
 const calendarDiv = document.getElementById("calendar");
 
@@ -549,7 +543,7 @@ function renderCalendar(monthIndex) {
   for (let row = 0; row < 6; row++) {
     html += '<tr>';
     for (let col = 0; col < 7; col++) {
-      if (row === 0 && col < start || day > daysInMonth) {
+      if ((row === 0 && col < start) || day > daysInMonth) {
         html += '<td></td>';
       } else {
         const iso = isoDate(YEAR, monthIndex, day);
@@ -579,7 +573,12 @@ monthSelect.addEventListener("change", () => {
   renderCalendar(parseInt(monthSelect.value, 10));
 });
 
-// affichage initial
+// ✅ Mois courant au chargement (sans re-déclarer "now")
+let initialMonth = (now.getFullYear() === YEAR) ? now.getMonth() : 0;
+if (initialMonth < 0) initialMonth = 0;
+if (initialMonth > 11) initialMonth = 11;
+
+monthSelect.value = String(initialMonth);
 renderCalendar(initialMonth);
 </script>
 
